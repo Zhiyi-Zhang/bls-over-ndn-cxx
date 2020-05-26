@@ -69,7 +69,7 @@ BackEndMem::doGetKeyHandle(const Name& keyName) const
   return make_unique<KeyHandleMem>(it->second);
 }
 
-unique_ptr<KeyHandle>
+unique_ptr<KeyHandle> // TODO: add BLS support
 BackEndMem::doCreateKey(const Name& identityName, const KeyParams& params)
 {
   switch (params.getKeyType()) {

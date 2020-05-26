@@ -23,6 +23,15 @@
 #include "util.hpp"
 
 #include "ndn-cxx/util/io.hpp"
+#include <bls/bls256.h>
+#include <bls/bls.hpp>
+#include <mcl/bn.hpp>
+
+
+// #include <mcl/bn_c384_256.h>
+// #include <mcl/bn256.hpp>
+
+#define ASSERT(x) { if (!(x)) { printf("err %s:%d\n", __FILE__, __LINE__); } }
 
 namespace ndn {
 namespace ndnsec {
@@ -47,7 +56,7 @@ ndnsec_key_gen(int argc, char** argv)
     ("identity,i",    po::value<Name>(&identityName), "identity name, e.g., /ndn/edu/ucla/alice")
     ("not-default,n", po::bool_switch(&wantNotDefault), "do not set the identity as default")
     ("type,t",        po::value<char>(&keyTypeChoice)->default_value('e'),
-                      "key type: 'r' for RSA, 'e' for ECDSA")
+                      "key type: 'r' for RSA, 'e' for ECDSA, 'b' for BLS")
     ("keyid-type,k",  po::value<char>(&keyIdTypeChoice),
                       "key id type: 'h' for the SHA-256 of the public key, 'r' for a 64-bit "
                       "random number (the default unless --keyid is specified)")
@@ -129,6 +138,14 @@ ndnsec_key_gen(int argc, char** argv)
     }
     else {
       params = make_unique<EcKeyParams>(detail::EcKeyParamsInfo::getDefaultSize(), keyIdType);
+    }
+    break;
+  case 'b':
+    if (keyIdType == KeyIdType::USER_SPECIFIED) {
+      params = make_unique<BlsKeyParams>(userKeyIdComponent);
+    }
+    else {
+      params = make_unique<BlsKeyParams>(detail::BlsKeyParamsInfo::getDefaultSize(), keyIdType);
     }
     break;
   default:

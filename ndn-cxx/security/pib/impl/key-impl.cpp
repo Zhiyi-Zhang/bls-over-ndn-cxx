@@ -44,7 +44,9 @@ KeyImpl::KeyImpl(const Name& keyName, const uint8_t* key, size_t keyLen, shared_
     publicKey.loadPkcs8(key, keyLen);
   }
   catch (const transform::PublicKey::Error&) {
-    NDN_THROW_NESTED(std::invalid_argument("Invalid key bits"));
+    publicKey.loadBls(key, keyLen);
+    // TODO: should check whether it's valid bls key
+    // NDN_THROW_NESTED(std::invalid_argument("Invalid key bits"));
   }
   m_keyType = publicKey.getKeyType();
 
@@ -63,7 +65,15 @@ KeyImpl::KeyImpl(const Name& keyName, shared_ptr<PibImpl> pibImpl)
   m_key = m_pib->getKeyBits(m_keyName);
 
   transform::PublicKey key;
-  key.loadPkcs8(m_key.data(), m_key.size());
+  try {
+    key.loadPkcs8(m_key.data(), m_key.size());
+  }
+  catch (const transform::PublicKey::Error&) {
+    key.loadBls(m_key.data(), m_key.size());
+    // TODO: dangerous, should check whether it's valid bls key
+    // NDN_THROW_NESTED(std::invalid_argument("Invalid key bits"));
+  }
+
   m_keyType = key.getKeyType();
 }
 

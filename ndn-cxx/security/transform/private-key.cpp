@@ -33,7 +33,11 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/scope_exit.hpp>
+#include <bls/bls256.h>
+#include <bls/bls.hpp>
+#include <mcl/bn.hpp>
 #include <cstring>
+#include <iostream>
 
 #define ENSURE_PRIVATE_KEY_LOADED(key) \
   do { \
@@ -50,6 +54,15 @@
 namespace ndn {
 namespace security {
 namespace transform {
+
+bool initBNPairing() {
+  static bool once = [](){
+        bls::init();
+        return true;
+    }();
+  
+  return once;
+}
 
 static void
 opensslInitAlgorithms()
@@ -73,6 +86,8 @@ public:
 
 public:
   EVP_PKEY* key = nullptr;
+  // workaround for BLS key
+  shared_ptr<bls::SecretKey> bls_skey = nullptr;
 
 #if OPENSSL_VERSION_NUMBER < 0x1010100fL
   size_t keySize = 0; // in bits, used only for HMAC
@@ -89,8 +104,11 @@ PrivateKey::~PrivateKey() = default;
 KeyType
 PrivateKey::getKeyType() const
 {
-  if (!m_impl->key)
+  if (!m_impl->key && !m_impl->bls_skey)
     return KeyType::NONE;
+  
+  if (m_impl->bls_skey)
+    return KeyType::BLS;
 
   switch (detail::getEvpPkeyType(m_impl->key)) {
   case EVP_PKEY_RSA:
@@ -104,6 +122,7 @@ PrivateKey::getKeyType() const
   }
 }
 
+// TODO: add bls key support
 size_t
 PrivateKey::getKeySize() const
 {
@@ -197,6 +216,31 @@ PrivateKey::loadPkcs1(std::istream& is)
   this->loadPkcs1(os.buf()->data(), os.buf()->size());
 }
 
+// NOTE: workaround for bls key
+void
+PrivateKey::loadPlain(const uint8_t* buf, size_t size)
+{
+  initBNPairing();
+  m_impl->bls_skey = make_shared<bls::SecretKey>();
+  try{
+    std::string sec_str((char*)buf, size);
+    m_impl->bls_skey->deserializeHexStr(sec_str);
+  }
+  catch (const std::runtime_error&) {
+    NDN_THROW(Error("Failed to load bls private key"));
+  }
+  // std::printf("Successfully loaded bls secrect key\n"); // TODO: remove log
+}
+
+// NOTE: this is only a workaround for bls key
+void
+PrivateKey::loadPlain(std::istream& is)
+{
+  OBufferStream os;
+  streamSource(is) >> streamSink(os);
+  this->loadPlain(os.buf()->data(), os.buf()->size());
+}
+
 void
 PrivateKey::loadPkcs1Base64(const uint8_t* buf, size_t size)
 {
@@ -211,6 +255,24 @@ PrivateKey::loadPkcs1Base64(std::istream& is)
   OBufferStream os;
   streamSource(is) >> base64Decode() >> streamSink(os);
   this->loadPkcs1(os.buf()->data(), os.buf()->size());
+}
+
+// work around for BLS key
+void
+PrivateKey::loadPlainBase64(const uint8_t* buf, size_t size)
+{
+  OBufferStream os;
+  bufferSource(buf, size) >> base64Decode() >> streamSink(os);
+  this->loadPlain(os.buf()->data(), os.buf()->size());
+}
+
+// work around for BLS key
+void
+PrivateKey::loadPlainBase64(std::istream& is)
+{
+  OBufferStream os;
+  streamSource(is) >> base64Decode() >> streamSink(os);
+  this->loadPlain(os.buf()->data(), os.buf()->size());
 }
 
 void
@@ -303,6 +365,13 @@ PrivateKey::loadPkcs8Base64(std::istream& is, PasswordCallback pwCallback)
   this->loadPkcs8(os.buf()->data(), os.buf()->size(), pwCallback);
 }
 
+// workaround for BLS key
+void
+PrivateKey::savePlainBase64(std::ostream& os) const
+{
+  bufferSource(*this->toPlain()) >> base64Encode() >> streamSink(os);
+}
+
 void
 PrivateKey::savePkcs1(std::ostream& os) const
 {
@@ -342,6 +411,20 @@ PrivateKey::savePkcs8Base64(std::ostream& os, PasswordCallback pwCallback) const
 ConstBufferPtr
 PrivateKey::derivePublicKey() const
 {
+  // special case for BLS
+  if(getKeyType() == KeyType::BLS) {
+
+    ENSURE_PRIVATE_KEY_LOADED(m_impl->bls_skey);
+    initBNPairing();
+
+    bls::PublicKey pub;
+
+    m_impl->bls_skey->getPublicKey(pub);
+    std::string pub_str = pub.serializeToHexStr();
+    auto result = make_shared<Buffer>(pub_str.c_str(), pub_str.size());
+
+    return result;
+  }
   ENSURE_PRIVATE_KEY_LOADED(m_impl->key);
 
   uint8_t* pkcs8 = nullptr;
@@ -371,10 +454,37 @@ PrivateKey::decrypt(const uint8_t* cipherText, size_t cipherLen) const
   }
 }
 
+// workaround for bls key. TODO: error check
+ConstBufferPtr
+PrivateKey::doBlsSign(const uint8_t* buf, size_t size) const
+{ 
+  std::fprintf(stderr, "\nSigning with BLS key\n\n"); // TODO: remove log
+  initBNPairing();
+  bls::Signature sig;
+  m_impl->bls_skey->sign(sig, buf, size);
+  std::string sig_str = sig.serializeToHexStr();
+  auto buffer = make_shared<Buffer>(sig_str.c_str(), sig_str.size());
+  return buffer; 
+}
+
 void*
 PrivateKey::getEvpPkey() const
 {
   return m_impl->key;
+}
+
+// workaround for bls
+ConstBufferPtr
+PrivateKey::toPlain() const
+{
+  if (!m_impl->bls_skey)
+    NDN_THROW(Error("Cannot convert BLS key to plain text, BLS key not found"));
+
+  std::string sec_str = m_impl->bls_skey->serializeToHexStr();
+  const uint8_t* buf = reinterpret_cast<const uint8_t*>(sec_str.data());
+  auto buffer = make_shared<Buffer>(buf, sec_str.size());  
+
+  return buffer;
 }
 
 ConstBufferPtr
@@ -519,6 +629,18 @@ PrivateKey::generateEcKey(uint32_t keySize)
 }
 
 unique_ptr<PrivateKey>
+PrivateKey::generateBlsKey(uint32_t keySize)
+{ 
+  auto privateKey = make_unique<PrivateKey>();
+  initBNPairing();
+  std::fprintf(stderr, "\ngenerating BLS key\n");
+  privateKey->m_impl->bls_skey = make_shared<bls::SecretKey>();
+  privateKey->m_impl->bls_skey->init();
+
+  return privateKey;
+}
+
+unique_ptr<PrivateKey>
 PrivateKey::generateHmacKey(uint32_t keySize)
 {
   std::vector<uint8_t> rawKey(keySize / 8);
@@ -546,6 +668,10 @@ generatePrivateKey(const KeyParams& keyParams)
     case KeyType::EC: {
       const EcKeyParams& ecParams = static_cast<const EcKeyParams&>(keyParams);
       return PrivateKey::generateEcKey(ecParams.getKeySize());
+    }
+    case KeyType::BLS: {
+      const BlsKeyParams& blsParams = static_cast<const BlsKeyParams&>(keyParams);
+      return PrivateKey::generateBlsKey(blsParams.getKeySize());
     }
     case KeyType::HMAC: {
       const HmacKeyParams& hmacParams = static_cast<const HmacKeyParams&>(keyParams);

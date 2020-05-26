@@ -51,6 +51,8 @@ operator<<(std::ostream& os, KeyType keyType)
       return os << "EC";
     case KeyType::AES:
       return os << "AES";
+    case KeyType::BLS:
+      return os << "BLS";
     case KeyType::HMAC:
       return os << "HMAC";
   }

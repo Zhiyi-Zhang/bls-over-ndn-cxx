@@ -56,6 +56,7 @@ SignerFilter::~SignerFilter() = default;
 size_t
 SignerFilter::convert(const uint8_t* buf, size_t size)
 {
+  // TODO: need to deal with BLS signature
   if (EVP_DigestSignUpdate(m_impl->ctx, buf, size) != 1)
     NDN_THROW(Error(getIndex(), "Failed to accept more input"));
 
@@ -65,6 +66,7 @@ SignerFilter::convert(const uint8_t* buf, size_t size)
 void
 SignerFilter::finalize()
 {
+  // TODO: need to deal with BLS signature
   size_t sigLen = 0;
   if (EVP_DigestSignFinal(m_impl->ctx, nullptr, &sigLen) != 1)
     NDN_THROW(Error(getIndex(), "Failed to estimate buffer length"));

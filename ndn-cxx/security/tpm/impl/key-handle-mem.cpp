@@ -41,6 +41,11 @@ KeyHandleMem::KeyHandleMem(shared_ptr<transform::PrivateKey> key)
 ConstBufferPtr
 KeyHandleMem::doSign(DigestAlgorithm digestAlgorithm, const uint8_t* buf, size_t size) const
 {
+  // special case for BLS
+  if (m_key->getKeyType() == KeyType::BLS){
+    return m_key->doBlsSign(buf, size);
+    // return something
+  }
   using namespace transform;
 
   OBufferStream sigOs;

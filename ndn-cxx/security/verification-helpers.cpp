@@ -57,6 +57,10 @@ verifySignature(const uint8_t* blob, size_t blobLen, const uint8_t* sig, size_t 
                 const transform::PublicKey& key)
 {
   bool result = false;
+  // TODO: special case for BLS key
+  if(key.getKeyType() == KeyType::BLS) {
+    return key.doBlsVerification(blob, blobLen, sig, sigLen);
+  }
   try {
     using namespace transform;
     bufferSource(blob, blobLen) >> verifierFilter(DigestAlgorithm::SHA256, key, sig, sigLen)
@@ -76,8 +80,13 @@ verifySignature(const uint8_t* data, size_t dataLen, const uint8_t* sig, size_t 
   try {
     pKey.loadPkcs8(key, keyLen);
   }
-  catch (const transform::Error&) {
-    return false;
+  catch (const transform::PublicKey::Error&) {
+    try{
+      pKey.loadBls(key, keyLen);
+    }
+    catch (const transform::Error&){
+      return false;
+    }
   }
 
   return verifySignature(data, dataLen, sig, sigLen, pKey);

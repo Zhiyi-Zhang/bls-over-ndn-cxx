@@ -628,6 +628,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
     }
     case SigningInfo::SIGNER_TYPE_KEY: {
       key = params.getPibKey();
+      
       if (!key) {
         Name identityName = extractIdentityFromKeyName(params.getSignerName());
         try {
@@ -688,10 +689,8 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
   }
 
   BOOST_ASSERT(key);
-
   sigInfo.setSignatureType(getSignatureType(key.getKeyType(), params.getDigestAlgorithm()));
   sigInfo.setKeyLocator(key.getName());
-
   NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
   return std::make_tuple(key.getName(), sigInfo);
 }
@@ -716,6 +715,8 @@ KeyChain::getSignatureType(KeyType keyType, DigestAlgorithm)
     return tlv::SignatureSha256WithEcdsa;
   case KeyType::HMAC:
     return tlv::SignatureHmacWithSha256;
+  case KeyType::BLS:
+    return tlv::SignatureSha256WithBls;
   default:
     NDN_THROW(Error("Unsupported key type " + boost::lexical_cast<std::string>(keyType)));
   }

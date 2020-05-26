@@ -58,6 +58,13 @@ public:
   getKeyType() const;
 
   /**
+   * @brief Load the BLS public key in plain text format from a buffer @p buf
+   * TODO: this needs further safe check
+   */
+  void
+  loadBls(const uint8_t* buf, size_t size);
+
+  /**
    * @brief Load the public key in PKCS#8 format from a buffer @p buf
    */
   void
@@ -100,6 +107,13 @@ public:
    */
   ConstBufferPtr
   encrypt(const uint8_t* plainText, size_t plainLen) const;
+
+  /**
+   * do BLS signature verification
+   * TODO: only a workaround, needs further check
+   */
+  bool
+  doBlsVerification(const uint8_t* blob, size_t blobLen, const uint8_t* sig, size_t sigLen) const;
 
 private:
   friend class VerifierFilter;

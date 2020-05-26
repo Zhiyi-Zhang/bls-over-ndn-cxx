@@ -126,6 +126,7 @@ BackEndFile::doCreateKey(const Name& identityName, const KeyParams& params)
   switch (params.getKeyType()) {
   case KeyType::RSA:
   case KeyType::EC:
+  case KeyType::BLS:
     break;
   default:
     NDN_THROW(std::invalid_argument("File-based TPM does not support creating a key of type " +
@@ -202,12 +203,27 @@ BackEndFile::doImportKey(const Name& keyName, shared_ptr<transform::PrivateKey> 
   }
 }
 
+// TODO: currently added workaround for BLS key, needs refactoring
 unique_ptr<PrivateKey>
 BackEndFile::loadKey(const Name& keyName) const
 {
   std::ifstream is(m_impl->toFileName(keyName).string());
   auto key = make_unique<PrivateKey>();
-  key->loadPkcs1Base64(is);
+  
+  try {
+    key->loadPkcs1Base64(is);
+  }
+  catch (const PrivateKey::Error&) {
+    try {
+      // try load BLS key
+      std::ifstream iss(m_impl->toFileName(keyName).string());
+      key->loadPlainBase64(iss);
+    }
+    catch (const PrivateKey::Error&) {
+      NDN_THROW(Error("failed to load bls key"));
+    }
+  } 
+  
   return key;
 }
 
@@ -216,8 +232,14 @@ BackEndFile::saveKey(const Name& keyName, const PrivateKey& key)
 {
   std::string fileName = m_impl->toFileName(keyName).string();
   std::ofstream os(fileName);
-  key.savePkcs1Base64(os);
-
+  // special case for BLS key type, need further refactoring
+  if (key.getKeyType() == KeyType::BLS) {
+    key.savePlainBase64(os);
+  }
+  else{
+    key.savePkcs1Base64(os);
+  }
+  
   // set file permission
   ::chmod(fileName.data(), 0000400);
 }
