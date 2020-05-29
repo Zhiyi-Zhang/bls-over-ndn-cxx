@@ -120,12 +120,13 @@ BackEndFile::doGetKeyHandle(const Name& keyName) const
   return make_unique<KeyHandleMem>(loadKey(keyName));
 }
 
-unique_ptr<KeyHandle>
+unique_ptr<KeyHandle> // TODO: add BLS support
 BackEndFile::doCreateKey(const Name& identityName, const KeyParams& params)
 {
   switch (params.getKeyType()) {
   case KeyType::RSA:
   case KeyType::EC:
+  case KeyType::BLS:
     break;
   default:
     NDN_THROW(std::invalid_argument("File-based TPM does not support creating a key of type " +

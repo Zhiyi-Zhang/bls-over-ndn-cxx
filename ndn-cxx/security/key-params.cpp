@@ -48,6 +48,8 @@ const uint32_t EC_KEY_SIZES[] = {224, 256, 384, 521};
 const uint32_t DEFAULT_EC_KEY_SIZE = 256;
 const uint32_t AES_KEY_SIZES[] = {128, 192, 256};
 const uint32_t DEFAULT_AES_KEY_SIZE = 128;
+const uint32_t BLS_KEY_SIZES[] = {224, 256, 384, 521}; // TODO:::: should use BLS params, currently faked with EC key
+const uint32_t DEFAULT_BLS_KEY_SIZE = 256; // TODO:::: should use BLS params, currently faked with EC key
 const uint32_t DEFAULT_HMAC_KEY_SIZE = 256;
 
 uint32_t
@@ -94,6 +96,22 @@ uint32_t
 AesKeyParamsInfo::getDefaultSize()
 {
   return DEFAULT_AES_KEY_SIZE;
+}
+
+uint32_t
+BlsKeyParamsInfo::checkKeySize(uint32_t size)
+{
+  for (size_t i = 0; i < (sizeof(BLS_KEY_SIZES) / sizeof(BLS_KEY_SIZES[0])); i++) {
+    if (BLS_KEY_SIZES[i] == size)
+      return size; 
+  }
+  NDN_THROW(KeyParams::Error("Unsupported BLS key size " + to_string(size)));
+}
+
+uint32_t
+BlsKeyParamsInfo::getDefaultSize()
+{
+  return DEFAULT_BLS_KEY_SIZE;
 }
 
 uint32_t

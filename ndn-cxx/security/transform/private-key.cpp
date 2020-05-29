@@ -519,6 +519,54 @@ PrivateKey::generateEcKey(uint32_t keySize)
 }
 
 unique_ptr<PrivateKey>
+PrivateKey::generateBlsKey(uint32_t keySize)
+{ // TODO: critical change, currently faked with EC key !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  EC_KEY* eckey = nullptr;
+  switch (keySize) {
+  case 224:
+    eckey = EC_KEY_new_by_curve_name(NID_secp224r1);
+    break;
+  case 256:
+    eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1); // same as secp256r1
+    break;
+  case 384:
+    eckey = EC_KEY_new_by_curve_name(NID_secp384r1);
+    break;
+  case 521:
+    eckey = EC_KEY_new_by_curve_name(NID_secp521r1);
+    break;
+  default:
+    NDN_THROW(std::invalid_argument("Unsupported EC key length " + to_string(keySize)));
+  }
+  if (eckey == nullptr)
+    NDN_THROW(Error("Failed to set EC curve"));
+
+  BOOST_SCOPE_EXIT(&eckey) {
+    EC_KEY_free(eckey);
+  } BOOST_SCOPE_EXIT_END
+
+#if OPENSSL_VERSION_NUMBER < 0x1010000fL
+  EC_KEY_set_asn1_flag(eckey, OPENSSL_EC_NAMED_CURVE);
+#endif // OPENSSL_VERSION_NUMBER < 0x1010000fL
+
+  if (EC_KEY_generate_key(eckey) != 1) {
+    NDN_THROW(Error("Failed to generate EC key"));
+  }
+
+  auto privateKey = make_unique<PrivateKey>();
+  privateKey->m_impl->key = EVP_PKEY_new();
+  if (privateKey->m_impl->key == nullptr)
+    NDN_THROW(Error("Failed to create EVP_PKEY"));
+  if (EVP_PKEY_set1_EC_KEY(privateKey->m_impl->key, eckey) != 1)
+    NDN_THROW(Error("Failed to assign EC key"));
+
+  std::printf("\n\ngenerated fake BLS key (EC key)\n\n");
+
+  return privateKey;
+  // TODO:!!!!!!!!!!!!!!!!!!!!!!!!! the above is EC implementation, only to fake it 
+}
+
+unique_ptr<PrivateKey>
 PrivateKey::generateHmacKey(uint32_t keySize)
 {
   std::vector<uint8_t> rawKey(keySize / 8);
@@ -546,6 +594,10 @@ generatePrivateKey(const KeyParams& keyParams)
     case KeyType::EC: {
       const EcKeyParams& ecParams = static_cast<const EcKeyParams&>(keyParams);
       return PrivateKey::generateEcKey(ecParams.getKeySize());
+    }
+    case KeyType::BLS: {
+      const BlsKeyParams& blsParams = static_cast<const BlsKeyParams&>(keyParams);
+      return PrivateKey::generateBlsKey(blsParams.getKeySize());
     }
     case KeyType::HMAC: {
       const HmacKeyParams& hmacParams = static_cast<const HmacKeyParams&>(keyParams);

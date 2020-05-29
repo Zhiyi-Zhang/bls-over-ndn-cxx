@@ -24,7 +24,8 @@
 
 #include "ndn-cxx/util/io.hpp"
 
-#include <mcl/bn_c384_256.h>
+// #include <mcl/bn_c384_256.h>
+#include <mcl/bn256.hpp>
 
 #define ASSERT(x) { if (!(x)) { printf("err %s:%d\n", __FILE__, __LINE__); } }
 
@@ -42,47 +43,51 @@ ndnsec_key_gen(int argc, char** argv)
   char keyIdTypeChoice;
   std::string userKeyId;
 
+  {
+    using namespace mcl::bn256;
 
+    // setup parameter
+    std::string m = "hello mcl";
+    initPairing();
+    G2 Q;
+	  mapToG2(Q, 1);
 
-	char buf[1600];
-	const char *aStr = "123";
-	const char *bStr = "456";
-  printf("DBG 1 %d\n", MCLBN_COMPILED_TIME_VAR);
-	int ret = mclBn_init(MCL_BLS12_381, MCLBN_COMPILED_TIME_VAR);
-	if (ret != 0) {
-		printf("err ret=%d\n", ret);
-		return 1;
-	}
-	mclBnFr a, b, ab;
-	mclBnG1 P, aP;
-	mclBnG2 Q, bQ;
-	mclBnGT e, e1, e2;
-	mclBnFr_setStr(&a, aStr, strlen(aStr), 10);
-	mclBnFr_setStr(&b, bStr, strlen(bStr), 10);
-	mclBnFr_mul(&ab, &a, &b);
-	mclBnFr_getStr(buf, sizeof(buf), &ab, 10);
-	printf("%s x %s = %s\n", aStr, bStr, buf);
+    // generate secret key and public key
+    Fr s;
+    G2 pub;
+    // KeyGen(s, pub, Q);
+    s.setRand();
+	  G2::mul(pub, Q, s); // pub = sQ
 
-	ASSERT(!mclBnG1_hashAndMapTo(&P, "this", 4));
-	ASSERT(!mclBnG2_hashAndMapTo(&Q, "that", 4));
-	ASSERT(mclBnG1_getStr(buf, sizeof(buf), &P, 16));
-	printf("P = %s\n", buf);
-	ASSERT(mclBnG2_getStr(buf, sizeof(buf), &Q, 16));
-	printf("Q = %s\n", buf);
+    std::cout << "secret key " << s << std::endl;
+    std::cout << "public key " << pub << std::endl;
 
-	mclBnG1_mul(&aP, &P, &a);
-	mclBnG2_mul(&bQ, &Q, &b);
+    // sign
+    G1 sign;
+    // Sign(sign, s, m);
+    G1 Hm;
+    // Hash(Hm, m);
+    Fp t;
+    t.setHashOf(m);
+    mapToG1(Hm, t);
+    G1::mul(sign, Hm, s); // sign = s H(m)
+    std::cout << "msg " << m << std::endl;
+    std::cout << "sign " << sign << std::endl;
 
-	mclBn_pairing(&e, &P, &Q);
-	ASSERT(mclBnGT_getStr(buf, sizeof(buf), &e, 16));
-	printf("e = %s\n", buf);
-	mclBnGT_pow(&e1, &e, &a);
-	mclBn_pairing(&e2, &aP, &Q);
-	ASSERT(mclBnGT_isEqual(&e1, &e2));
+    // verify
+    // bool ok = Verify(sign, Q, pub, m);
+    Fp12 e1, e2;
+    G1 Hm2;
+    // Hash(Hm2, m);
+    Fp t2;
+    t2.setHashOf(m);
+    mapToG1(Hm2, t2);
+    pairing(e1, sign, Q); // e1 = e(sign, Q)
+    pairing(e2, Hm2, pub); // e2 = e(Hm, sQ)
+	  bool ok = (e1 == e2);
+    std::cout << "verify " << (ok ? "ok" : "ng") << std::endl;
 
-	mclBnGT_pow(&e1, &e, &b);
-	mclBn_pairing(&e2, &P, &bQ);
-	ASSERT(mclBnGT_isEqual(&e1, &e2));
+  }
 
   po::options_description description(
     "Usage: ndnsec key-gen [-h] [-n] [-t TYPE] [-k KEYIDTYPE|--keyid KEYID] [-i] IDENTITY\n"
@@ -93,7 +98,7 @@ ndnsec_key_gen(int argc, char** argv)
     ("identity,i",    po::value<Name>(&identityName), "identity name, e.g., /ndn/edu/ucla/alice")
     ("not-default,n", po::bool_switch(&wantNotDefault), "do not set the identity as default")
     ("type,t",        po::value<char>(&keyTypeChoice)->default_value('e'),
-                      "key type: 'r' for RSA, 'e' for ECDSA")
+                      "key type: 'r' for RSA, 'e' for ECDSA, 'b' for BLS")
     ("keyid-type,k",  po::value<char>(&keyIdTypeChoice),
                       "key id type: 'h' for the SHA-256 of the public key, 'r' for a 64-bit "
                       "random number (the default unless --keyid is specified)")
@@ -177,6 +182,14 @@ ndnsec_key_gen(int argc, char** argv)
       params = make_unique<EcKeyParams>(detail::EcKeyParamsInfo::getDefaultSize(), keyIdType);
     }
     break;
+  case 'b':
+    if (keyIdType == KeyIdType::USER_SPECIFIED) {
+      params = make_unique<BlsKeyParams>(userKeyIdComponent);
+    }
+    else {
+      params = make_unique<BlsKeyParams>(detail::BlsKeyParamsInfo::getDefaultSize(), keyIdType);
+    }
+    break;
   default:
     std::cerr << "ERROR: unrecognized key type '" << keyTypeChoice << "'" << std::endl;
     return 2;
@@ -188,11 +201,11 @@ ndnsec_key_gen(int argc, char** argv)
   security::Key key;
   try {
     identity = keyChain.getPib().getIdentity(identityName);
-    key = keyChain.createKey(identity, *params);
+    key = keyChain.createKey(identity, *params);    // TODO: partially implemented, faked with EC key
   }
   catch (const security::Pib::Error&) {
     // identity doesn't exist, so create it and generate key
-    identity = keyChain.createIdentity(identityName, *params);
+    identity = keyChain.createIdentity(identityName, *params);    // TODO: partly implemented, faked with EC key
     key = identity.getDefaultKey();
   }
 

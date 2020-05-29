@@ -141,6 +141,28 @@ public:
   getDefaultSize();
 };
 
+/// @brief BlsKeyParamInfo is used to instantiate SimplePublicKeyParams for BLS keys.
+class BlsKeyParamsInfo
+{
+public:
+  static constexpr KeyType
+  getType()
+  {
+    return KeyType::BLS;
+  }
+
+  /**
+   * @brief check if @p size is valid and supported for this key type.
+   *
+   * @throw KeyParams::Error if the key size is not supported.
+   */
+  static uint32_t
+  checkKeySize(uint32_t size);
+
+  static uint32_t
+  getDefaultSize();
+};
+
 } // namespace detail
 
 
@@ -200,6 +222,9 @@ typedef SimplePublicKeyParams<detail::RsaKeyParamsInfo> RsaKeyParams;
 
 /// @brief EcKeyParams carries parameters for EC key.
 typedef SimplePublicKeyParams<detail::EcKeyParamsInfo> EcKeyParams;
+
+/// @brief BlsKeyParams carries parameters for BLS key.
+typedef SimplePublicKeyParams<detail::BlsKeyParamsInfo> BlsKeyParams;
 
 
 namespace detail {

@@ -345,7 +345,7 @@ BackEndOsx::doGetKeyHandle(const Name& keyName) const
   return make_unique<KeyHandleOsx>(keyRef.get());
 }
 
-unique_ptr<KeyHandle>
+unique_ptr<KeyHandle> // TODO: add BLS support (macOS keychain currently doesn't support BLS)
 BackEndOsx::doCreateKey(const Name& identityName, const KeyParams& params)
 {
   KeyType keyType = params.getKeyType();

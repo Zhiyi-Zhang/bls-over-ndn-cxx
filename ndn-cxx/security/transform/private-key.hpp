@@ -273,6 +273,9 @@ private:
   generateEcKey(uint32_t keySize);
 
   static unique_ptr<PrivateKey>
+  generateBlsKey(uint32_t keySize);
+
+  static unique_ptr<PrivateKey>
   generateHmacKey(uint32_t keySize);
 
 private:

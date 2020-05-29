@@ -167,9 +167,9 @@ def build(bld):
 
     # Only link the curve that are used
     bld.read_shlib('gmp')
-    #bld.read_shlib('mcl')
-    #bld.read_shlib('mclbn256')
-    #bld.read_shlib('mclbn384')
+    bld.read_shlib('mcl')
+    bld.read_shlib('mclbn256')
+    bld.read_shlib('mclbn384')
     bld.read_shlib('mclbn384_256')
     #bld.read_shlib('mclbn512')
     #bld.read_shlib('mclshe256')
