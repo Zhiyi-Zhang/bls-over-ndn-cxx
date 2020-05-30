@@ -43,6 +43,7 @@ ndnsec_key_gen(int argc, char** argv)
   char keyIdTypeChoice;
   std::string userKeyId;
 
+/*
   {
     using namespace mcl::bn256;
 
@@ -59,8 +60,46 @@ ndnsec_key_gen(int argc, char** argv)
     s.setRand();
 	  G2::mul(pub, Q, s); // pub = sQ
 
+    std::ofstream os("xxxxtmp");
+    os << s;
+    std::cout << "\n\n stored to file" << std::endl;
+
     std::cout << "secret key " << s << std::endl;
     std::cout << "public key " << pub << std::endl;
+
+    std::string sec_str;
+    s.getStr(sec_str);
+    std::string pub_str;
+    pub.getStr(pub_str);
+
+    std::ostringstream os_sec;
+    os_sec << s;
+    std::ostringstream os_pub;
+    os_pub << pub;
+
+    std::cout << "secret key str \n" << os_sec.str() << std::endl;
+    std::cout << "public key str \n" << os_pub.str() << std::endl;
+    Fr s_loaded;
+    std::istringstream iss(os_sec.str());
+    iss >> s_loaded;
+    G2 pub_loaded;
+    std::istringstream isp(os_pub.str());
+    isp >> pub_loaded;
+    
+    std::cout << "loaded sec key \n" << std::endl;
+
+
+
+    // // TODO: test
+    // G2 pub_loaded_test;
+    // // std::istringstream isp_test("3 4755531472481367320050321855359261053908859428675729523208717474045434288222 1214869512283725956150263339259846474892970500454552944251614220306976737118");
+    // std::istringstream isp_test("2 6546227188043548762710371008467396985457043891793766953586101882713137472036 15910615552758269835124486855865246826342720849428341402232124162937770466994");
+    // isp_test >> pub_loaded;
+
+
+
+
+   
 
     // sign
     G1 sign;
@@ -68,6 +107,7 @@ ndnsec_key_gen(int argc, char** argv)
     G1 Hm;
     // Hash(Hm, m);
     Fp t;
+    // t.setHashOf(const void * msg, size_t msgSize);
     t.setHashOf(m);
     mapToG1(Hm, t);
     G1::mul(sign, Hm, s); // sign = s H(m)
@@ -83,11 +123,12 @@ ndnsec_key_gen(int argc, char** argv)
     t2.setHashOf(m);
     mapToG1(Hm2, t2);
     pairing(e1, sign, Q); // e1 = e(sign, Q)
-    pairing(e2, Hm2, pub); // e2 = e(Hm, sQ)
+    pairing(e2, Hm2, pub_loaded); // e2 = e(Hm, sQ)
 	  bool ok = (e1 == e2);
     std::cout << "verify " << (ok ? "ok" : "ng") << std::endl;
 
   }
+*/
 
   po::options_description description(
     "Usage: ndnsec key-gen [-h] [-n] [-t TYPE] [-k KEYIDTYPE|--keyid KEYID] [-i] IDENTITY\n"
@@ -205,7 +246,7 @@ ndnsec_key_gen(int argc, char** argv)
   }
   catch (const security::Pib::Error&) {
     // identity doesn't exist, so create it and generate key
-    identity = keyChain.createIdentity(identityName, *params);    // TODO: partly implemented, faked with EC key
+    identity = keyChain.createIdentity(identityName, *params);
     key = identity.getDefaultKey();
   }
 
@@ -214,6 +255,8 @@ ndnsec_key_gen(int argc, char** argv)
     keyChain.setDefaultIdentity(identity);
   }
 
+  // TODO:
+  std::cerr << "Successfully created key" << std::endl;
   io::save(key.getDefaultCertificate(), std::cout);
 
   return 0;

@@ -58,6 +58,13 @@ public:
   getKeyType() const;
 
   /**
+   * @brief Load the BLS public key in plain text format from a buffer @p buf
+   * TODO: this needs further safe check
+   */
+  void
+  loadBls(const uint8_t* buf, size_t size);
+
+  /**
    * @brief Load the public key in PKCS#8 format from a buffer @p buf
    */
   void

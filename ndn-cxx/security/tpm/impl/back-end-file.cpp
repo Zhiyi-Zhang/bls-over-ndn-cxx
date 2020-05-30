@@ -204,11 +204,27 @@ BackEndFile::doImportKey(const Name& keyName, shared_ptr<transform::PrivateKey> 
 }
 
 unique_ptr<PrivateKey>
+
 BackEndFile::loadKey(const Name& keyName) const
 {
   std::ifstream is(m_impl->toFileName(keyName).string());
   auto key = make_unique<PrivateKey>();
-  key->loadPkcs1Base64(is);
+  // TODO: support BLS !!!!!!!!!!!!!!!!!!!
+  try {
+    key->loadPkcs1Base64(is);
+  }
+  catch (const PrivateKey::Error&) {
+    try {
+      // try load BLS key
+      key->loadPlainBase64(is);
+    }
+    catch (const PrivateKey::Error&) {
+      std::printf("\nfailed to load bls key\n"); // TODO: remove
+      NDN_THROW(Error("failed to load bls key"));
+    }
+  } 
+  
+  
   return key;
 }
 
@@ -217,8 +233,17 @@ BackEndFile::saveKey(const Name& keyName, const PrivateKey& key)
 {
   std::string fileName = m_impl->toFileName(keyName).string();
   std::ofstream os(fileName);
-  key.savePkcs1Base64(os);
-
+  // special case for BLS key type, need further refactoring
+  if (key.getKeyType() == KeyType::BLS) {
+    // TODO: save plain base64
+    std::printf("\n\ngot BLS key to save\n\n"); // TODO: delete printf
+    key.savePlainBase64(os);
+    std::printf("\n\nsaved BLS key\n\n"); // TODO: delete printf
+  }
+  else{
+    key.savePkcs1Base64(os);
+  }
+  
   // set file permission
   ::chmod(fileName.data(), 0000400);
 }

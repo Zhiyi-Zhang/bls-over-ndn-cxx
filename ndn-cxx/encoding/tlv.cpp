@@ -41,6 +41,8 @@ operator<<(std::ostream& os, SignatureTypeValue st)
       return os << "SignatureSha256WithEcdsa";
     case SignatureHmacWithSha256:
       return os << "SignatureHmacWithSha256";
+    case SignatureSha256WithBls:
+      return os << "SignatureSha256WithBls";
   }
   return os << "Unknown(" << static_cast<uint32_t>(st) << ')';
 }

@@ -28,6 +28,8 @@
 #include "ndn-cxx/security/impl/openssl-helper.hpp"
 #include "ndn-cxx/encoding/buffer-stream.hpp"
 
+#include <mcl/bn256.hpp>
+
 #define ENSURE_PUBLIC_KEY_LOADED(key) \
   do { \
     if ((key) == nullptr) \
@@ -48,7 +50,7 @@ class PublicKey::Impl
 {
 public:
   Impl() noexcept
-    : key(nullptr)
+    : key(nullptr), bls_pkey(nullptr)
   {
   }
 
@@ -59,6 +61,7 @@ public:
 
 public:
   EVP_PKEY* key;
+  shared_ptr<mcl::bn256::G2> bls_pkey;
 };
 
 PublicKey::PublicKey()
@@ -71,8 +74,11 @@ PublicKey::~PublicKey() = default;
 KeyType
 PublicKey::getKeyType() const
 {
-  if (!m_impl->key)
+  if (!m_impl->key && !m_impl->bls_pkey)
     return KeyType::NONE;
+  
+  if(m_impl->bls_pkey)
+    return KeyType::BLS;
 
   switch (detail::getEvpPkeyType(m_impl->key)) {
   case EVP_PKEY_RSA:
@@ -82,6 +88,28 @@ PublicKey::getKeyType() const
   default:
     return KeyType::NONE;
   }
+}
+
+void
+PublicKey::loadBls(const uint8_t* buf, size_t size)
+{
+  ENSURE_PUBLIC_KEY_NOT_LOADED(m_impl->bls_pkey);
+  mcl::bn256::initPairing(); // TODO: delete
+  if(size == 0)
+    NDN_THROW(Error("Failed to load BLS public key"));
+  m_impl->bls_pkey = make_shared<mcl::bn256::G2>();
+  std::printf("trying to deserialize bls public key\n");
+  m_impl->bls_pkey->deserialize(buf, size);
+
+
+  // std::string str((char*)buf, size); // TODO: explict type cast here, need further change
+  // std::istringstream is(str);
+  
+  // // TODO: remove
+  
+
+  // is >> *(m_impl->bls_pkey);
+  std::printf("\nloaded bls public key, transform/public-key.cpp\n");
 }
 
 void

@@ -33,6 +33,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/scope_exit.hpp>
+#include <mcl/bn256.hpp>
 #include <cstring>
 
 #define ENSURE_PRIVATE_KEY_LOADED(key) \
@@ -73,6 +74,8 @@ public:
 
 public:
   EVP_PKEY* key = nullptr;
+  shared_ptr<mcl::bn256::Fr> bls_skey = nullptr;
+  shared_ptr<mcl::bn256::G2> bls_pkey = nullptr;
 
 #if OPENSSL_VERSION_NUMBER < 0x1010100fL
   size_t keySize = 0; // in bits, used only for HMAC
@@ -89,8 +92,11 @@ PrivateKey::~PrivateKey() = default;
 KeyType
 PrivateKey::getKeyType() const
 {
-  if (!m_impl->key)
+  if (!m_impl->key && !m_impl->bls_skey)
     return KeyType::NONE;
+  
+  if (m_impl->bls_skey)
+    return KeyType::BLS;
 
   switch (detail::getEvpPkeyType(m_impl->key)) {
   case EVP_PKEY_RSA:
@@ -105,7 +111,7 @@ PrivateKey::getKeyType() const
 }
 
 size_t
-PrivateKey::getKeySize() const
+PrivateKey::getKeySize() const // TODO: BLS support
 {
   switch (getKeyType()) {
     case KeyType::RSA:
@@ -197,6 +203,37 @@ PrivateKey::loadPkcs1(std::istream& is)
   this->loadPkcs1(os.buf()->data(), os.buf()->size());
 }
 
+
+// TODO: workaround for bls key
+void
+PrivateKey::loadPlain(const uint8_t* buf, size_t size)
+{
+  mcl::bn256::initPairing();
+  m_impl->bls_skey = make_shared<mcl::bn256::Fr>();
+  std::printf("trying to deserialize bls secrect key\n"); // TODO: remove
+  try{
+    m_impl->bls_skey->deserialize(buf, size);
+  }
+  catch (const std::runtime_error&) {
+    std::printf("failed to deserialize bls secrect key\n"); // TODO: remove
+    NDN_THROW(Error("Failed to load bls private key"));
+  }
+  std::printf("successfully loaded bls secrect key\n"); // TODO: remove
+}
+
+// TODO: workaround for bls key
+void
+PrivateKey::loadPlain(std::istream& is)
+{
+  OBufferStream os;
+  streamSource(is) >> streamSink(os);
+  this->loadPlain(os.buf()->data(), os.buf()->size());
+}
+
+
+
+
+
 void
 PrivateKey::loadPkcs1Base64(const uint8_t* buf, size_t size)
 {
@@ -212,6 +249,40 @@ PrivateKey::loadPkcs1Base64(std::istream& is)
   streamSource(is) >> base64Decode() >> streamSink(os);
   this->loadPkcs1(os.buf()->data(), os.buf()->size());
 }
+
+
+
+
+// work around for BLS key, TODO: error check
+void
+PrivateKey::loadPlainBase64(const uint8_t* buf, size_t size)
+{
+  OBufferStream os;
+  bufferSource(buf, size) >> base64Decode() >> streamSink(os);
+  this->loadPlain(os.buf()->data(), os.buf()->size());
+}
+
+
+// work around for BLS key, TODO: error check
+void
+PrivateKey::loadPlainBase64(std::istream& is)
+{
+  OBufferStream os;
+  streamSource(is) >> base64Decode() >> streamSink(os);
+  this->loadPlain(os.buf()->data(), os.buf()->size());
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 void
 PrivateKey::loadPkcs8(const uint8_t* buf, size_t size, const char* pw, size_t pwLen)
@@ -303,6 +374,14 @@ PrivateKey::loadPkcs8Base64(std::istream& is, PasswordCallback pwCallback)
   this->loadPkcs8(os.buf()->data(), os.buf()->size(), pwCallback);
 }
 
+// TODO: store plain text for bls key type
+void
+PrivateKey::savePlainBase64(std::ostream& os) const
+{
+  bufferSource(*this->toPlain()) >> base64Encode() >> streamSink(os);
+  std::printf("\nprivate-key.cpp line 317 saved to streamSink\n");
+}
+
 void
 PrivateKey::savePkcs1(std::ostream& os) const
 {
@@ -342,6 +421,30 @@ PrivateKey::savePkcs8Base64(std::ostream& os, PasswordCallback pwCallback) const
 ConstBufferPtr
 PrivateKey::derivePublicKey() const
 {
+  if(getKeyType() == KeyType::BLS) {
+    ENSURE_PRIVATE_KEY_LOADED(m_impl->bls_skey);
+
+    const size_t buf_size = 2048;
+    uint8_t buf[buf_size];
+    size_t keysize = m_impl->bls_pkey->serialize(buf, buf_size);
+    auto result = make_shared<Buffer>(buf, keysize);
+    std::printf("derived BLS public key\n"); 
+    return result;
+
+
+
+    // std::ostringstream os;
+    // os << *(m_impl->bls_pkey);
+    // auto str = os.str();
+
+    // // TODO: remove 
+    // std::printf("derived public key\n%s\n", str.c_str());
+
+    // const char* cstr = str.c_str();
+    // auto result = make_shared<Buffer>(cstr, str.length());
+    // std::printf("\nprivate-key.cpp, derivePublicKey() for bls skey\n"); // TODO: remove log
+    // return result;
+  }
   ENSURE_PRIVATE_KEY_LOADED(m_impl->key);
 
   uint8_t* pkcs8 = nullptr;
@@ -371,10 +474,54 @@ PrivateKey::decrypt(const uint8_t* cipherText, size_t cipherLen) const
   }
 }
 
+// TODO: workaround for bls key
+ConstBufferPtr
+PrivateKey::doBlsSign(const uint8_t* buf, size_t size) const
+{ 
+  std::printf("\nSigning data with BLS key\n"); // TODO:
+  using namespace mcl::bn256;
+  G1 sign, Hm;
+  Fp t;
+  t.setHashOf(buf, size);
+  mapToG1(Hm, t);
+  G1::mul(sign, Hm, *(m_impl->bls_skey));
+  const size_t buf_size = 4096;
+  uint8_t bls_buf[buf_size];
+  size_t sig_size = sign.serialize(bls_buf, buf_size);
+  auto buffer = make_shared<Buffer>(bls_buf, sig_size);
+  std::printf("\nSigned data with BLS key\n"); // TODO
+  return buffer;
+}
+
 void*
 PrivateKey::getEvpPkey() const
 {
   return m_impl->key;
+}
+
+// TODO: not tested
+ConstBufferPtr
+PrivateKey::toPlain() const
+{
+  if (!m_impl->bls_skey)
+    NDN_THROW(Error("Cannot convert BLS key to plain text, BLS key not found"));
+
+  std::printf("\nconverting bls secrect key to plain\n");   // TODO: to delete
+  const size_t buf_size = 2048;
+  uint8_t buf[buf_size];
+  size_t keysize = m_impl->bls_skey->serialize(buf, buf_size);
+  auto buffer = make_shared<Buffer>(buf, keysize);
+  std::printf("\nconverted bls secrect key to plain\n"); // TODO: to delete
+  return buffer;
+
+  // std::printf("\nconverting bls secrect key to plain\n");   // TODO: to delete
+  // std::ostringstream os;
+  // os << *(m_impl->bls_skey);
+  // auto str = os.str();
+  // const char* cstr = str.c_str();
+  // auto buffer = make_shared<Buffer>(cstr, str.length());
+  // std::printf("\nconverted bls secrect key to plain\n"); // TODO: to delete
+  // return buffer;
 }
 
 ConstBufferPtr
@@ -520,49 +667,68 @@ PrivateKey::generateEcKey(uint32_t keySize)
 
 unique_ptr<PrivateKey>
 PrivateKey::generateBlsKey(uint32_t keySize)
-{ // TODO: critical change, currently faked with EC key !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  EC_KEY* eckey = nullptr;
-  switch (keySize) {
-  case 224:
-    eckey = EC_KEY_new_by_curve_name(NID_secp224r1);
-    break;
-  case 256:
-    eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1); // same as secp256r1
-    break;
-  case 384:
-    eckey = EC_KEY_new_by_curve_name(NID_secp384r1);
-    break;
-  case 521:
-    eckey = EC_KEY_new_by_curve_name(NID_secp521r1);
-    break;
-  default:
-    NDN_THROW(std::invalid_argument("Unsupported EC key length " + to_string(keySize)));
-  }
-  if (eckey == nullptr)
-    NDN_THROW(Error("Failed to set EC curve"));
-
-  BOOST_SCOPE_EXIT(&eckey) {
-    EC_KEY_free(eckey);
-  } BOOST_SCOPE_EXIT_END
-
-#if OPENSSL_VERSION_NUMBER < 0x1010000fL
-  EC_KEY_set_asn1_flag(eckey, OPENSSL_EC_NAMED_CURVE);
-#endif // OPENSSL_VERSION_NUMBER < 0x1010000fL
-
-  if (EC_KEY_generate_key(eckey) != 1) {
-    NDN_THROW(Error("Failed to generate EC key"));
-  }
-
+{ 
+// TODO: the following is a test of bls key generation
   auto privateKey = make_unique<PrivateKey>();
-  privateKey->m_impl->key = EVP_PKEY_new();
-  if (privateKey->m_impl->key == nullptr)
-    NDN_THROW(Error("Failed to create EVP_PKEY"));
-  if (EVP_PKEY_set1_EC_KEY(privateKey->m_impl->key, eckey) != 1)
-    NDN_THROW(Error("Failed to assign EC key"));
-
-  std::printf("\n\ngenerated fake BLS key (EC key)\n\n");
-
+  mcl::bn256::initPairing();
+  privateKey->m_impl->bls_skey = make_shared<mcl::bn256::Fr>();
+  privateKey->m_impl->bls_pkey = make_shared<mcl::bn256::G2>();
+  std::printf("\n\ngenerated bls_skey and bls_pkey\n\n");
   return privateKey;
+
+  
+  // auto privateKey = make_unique<PrivateKey>();
+  // privateKey->m_impl->key = EVP_PKEY_new();
+  // if (privateKey->m_impl->key == nullptr)
+  //   NDN_THROW(Error("Failed to create EVP_PKEY"));
+  // if (EVP_PKEY_set1_EC_KEY(privateKey->m_impl->key, eckey) != 1)
+  //   NDN_THROW(Error("Failed to assign EC key"));
+
+  // std::printf("\n\ngenerated fake BLS key (EC key)\n\n");
+  // return privateKey;
+  // TODO: critical change, currently faked with EC key !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//   EC_KEY* eckey = nullptr;
+//   switch (keySize) {
+//   case 224:
+//     eckey = EC_KEY_new_by_curve_name(NID_secp224r1);
+//     break;
+//   case 256:
+//     eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1); // same as secp256r1
+//     break;
+//   case 384:
+//     eckey = EC_KEY_new_by_curve_name(NID_secp384r1);
+//     break;
+//   case 521:
+//     eckey = EC_KEY_new_by_curve_name(NID_secp521r1);
+//     break;
+//   default:
+//     NDN_THROW(std::invalid_argument("Unsupported EC key length " + to_string(keySize)));
+//   }
+//   if (eckey == nullptr)
+//     NDN_THROW(Error("Failed to set EC curve"));
+
+//   BOOST_SCOPE_EXIT(&eckey) {
+//     EC_KEY_free(eckey);
+//   } BOOST_SCOPE_EXIT_END
+
+// #if OPENSSL_VERSION_NUMBER < 0x1010000fL
+//   EC_KEY_set_asn1_flag(eckey, OPENSSL_EC_NAMED_CURVE);
+// #endif // OPENSSL_VERSION_NUMBER < 0x1010000fL
+
+//   if (EC_KEY_generate_key(eckey) != 1) {
+//     NDN_THROW(Error("Failed to generate EC key"));
+//   }
+
+//   auto privateKeyFake = make_unique<PrivateKey>();
+//   privateKeyFake->m_impl->key = EVP_PKEY_new();
+//   if (privateKeyFake->m_impl->key == nullptr)
+//     NDN_THROW(Error("Failed to create EVP_PKEY"));
+//   if (EVP_PKEY_set1_EC_KEY(privateKeyFake->m_impl->key, eckey) != 1)
+//     NDN_THROW(Error("Failed to assign EC key"));
+
+//   std::printf("\n\ngenerated fake BLS key (EC key)\n\n");
+
+//   return privateKeyFake;
   // TODO:!!!!!!!!!!!!!!!!!!!!!!!!! the above is EC implementation, only to fake it 
 }
 

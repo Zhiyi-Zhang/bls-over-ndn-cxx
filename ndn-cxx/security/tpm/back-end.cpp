@@ -60,6 +60,8 @@ BackEnd::createKey(const Name& identity, const KeyParams& params)
     case KeyIdType::USER_SPECIFIED: {
       // check that the provided key id isn't already taken
       Name keyName = v2::constructKeyName(identity, params.getKeyId());
+      // TODO:
+      std::printf("key name to create: %s\n", keyName.toUri().c_str());
       if (hasKey(keyName)) {
         NDN_THROW(Error("Key `" + keyName.toUri() + "` already exists"));
       }

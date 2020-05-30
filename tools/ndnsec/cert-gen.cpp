@@ -136,7 +136,13 @@ ndnsec_cert_gen(int argc, char** argv)
   // validate that the content is a public key
   Buffer keyContent = certRequest.getPublicKey();
   security::transform::PublicKey pubKey;
-  pubKey.loadPkcs8(keyContent.data(), keyContent.size());
+  try {
+    pubKey.loadPkcs8(keyContent.data(), keyContent.size());
+  } 
+  catch (const ndn::security::transform::PublicKey::Error&) {
+    pubKey.loadBls(keyContent.data(), keyContent.size());
+  }
+  
 
   Name certName = certRequest.getKeyName();
   certName

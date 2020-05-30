@@ -105,6 +105,20 @@ public:
   loadPkcs1(std::istream& is);
 
   /**
+   * @brief Load the private key in plain text format from a buffer @p buf
+   * TODO: this is a workaround for bls key
+   */
+  void
+  loadPlain(const uint8_t* buf, size_t size);
+
+  /**
+   * @brief Load the private key in plain text format from a stream @p is
+   * TODO: this is a workaround for bls key
+   */
+  void
+  loadPlain(std::istream& is);
+
+  /**
    * @brief Load the private key in base64-encoded PKCS#1 format from a buffer @p buf
    */
   void
@@ -115,6 +129,20 @@ public:
    */
   void
   loadPkcs1Base64(std::istream& is);
+
+  /**
+   * @brief Load the private key in base64-encoded plain text format from a buffer @p buf
+   * workaround for BLS key TODO: needs further check
+   */
+  void
+  loadPlainBase64(const uint8_t* buf, size_t size);
+  
+  /**
+   * @brief Load the private key in base64-encoded plain text format from a stream @p is
+   * workaround for BLS key TODO: needs further check
+   */
+  void
+  loadPlainBase64(std::istream& is);
 
   /**
    * @brief Load the private key in encrypted PKCS#8 format from a buffer @p buf with passphrase @p pw
@@ -183,6 +211,13 @@ public:
   loadPkcs8Base64(std::istream& is, PasswordCallback pwCallback = nullptr);
 
   /**
+   * @brief Save the private key in base64-encoded plain text format into a stream @p os
+   * Currently only supports BLS key
+   */
+  void
+  savePlainBase64(std::ostream& os) const;
+
+  /**
    * @brief Save the private key in PKCS#1 format into a stream @p os
    */
   void
@@ -238,6 +273,12 @@ public:
   ConstBufferPtr
   decrypt(const uint8_t* cipherText, size_t cipherLen) const;
 
+  /**
+   * do BLS sign. Only a workaround, need refactoring
+   */
+  ConstBufferPtr
+  doBlsSign(const uint8_t* buf, size_t size) const;
+
 private:
   friend class SignerFilter;
   friend class VerifierFilter;
@@ -251,6 +292,9 @@ private:
   getEvpPkey() const;
 
 private:
+  ConstBufferPtr
+  toPlain() const;
+
   ConstBufferPtr
   toPkcs1() const;
 
