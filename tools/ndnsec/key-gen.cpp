@@ -48,8 +48,8 @@ ndnsec_key_gen(int argc, char** argv)
 
 // TODO: test bls
   bls::init();
-  // bls::SecretKey sec;
-  // bls::PublicKey pub;
+//   bls::SecretKey sec;
+//   bls::PublicKey pub;
 
 //   // keygen
   
@@ -63,10 +63,27 @@ ndnsec_key_gen(int argc, char** argv)
 //   std::cout << "pub\n" << pubstr << std::endl;
 //   std::cout<< "sec\n" << secstr << std::endl;
 
+// sec.deserializeHexStr()
 
 //   // sign
+//   const size_t buf_size = 1024;
+//   uint8_t buf[buf_size];
 //   sec.deserializeHexStr("xxxxxxx");
+//   pub.deserializeHexStr("pub str");
+//   bls::Signature sig;
+//   sec.sign(sig, buf, buf_size);
+//   std::string sig_str = sig.serializeToHexStr();
 
+
+//   // verify 
+//   sec.deserializeHexStr("xxxxxxx");
+//   pub.deserializeHexStr("pub str");
+//   bls::Signature given_sig;
+//   given_sig.deserializeHexStr("sig str");
+//   given_sig.verify(pub, buf, buf_size);
+
+  
+  
 
   
   

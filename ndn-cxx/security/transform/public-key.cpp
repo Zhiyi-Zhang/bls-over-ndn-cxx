@@ -28,7 +28,9 @@
 #include "ndn-cxx/security/impl/openssl-helper.hpp"
 #include "ndn-cxx/encoding/buffer-stream.hpp"
 
-#include <mcl/bn256.hpp>
+#include <mcl/bn256.hpp> // TODO: blslib remove
+#include <bls/bls384_256.h>
+#include <bls/bls.hpp>
 
 #define ENSURE_PUBLIC_KEY_LOADED(key) \
   do { \
@@ -62,6 +64,8 @@ public:
 public:
   EVP_PKEY* key;
   shared_ptr<mcl::bn256::G2> bls_pkey;
+  // TODO: blslib
+  // shared_ptr<bls::PublicKey> bls_pkey;
 };
 
 PublicKey::PublicKey()
@@ -102,6 +106,19 @@ PublicKey::loadBls(const uint8_t* buf, size_t size)
   initBNPairing(); // TODO: delete
   if(size == 0)
     NDN_THROW(Error("Failed to load BLS public key"));
+
+
+
+
+  // TODO: blslib
+  // m_impl->bls_pkey = make_shared<bls::PublicKey>();
+  // std::printf("trying to deserialize bls public key\n");
+  // m_impl->bls_pkey->deserializeHexStr(std::string(buf, size));
+  // std::printf("\nloaded bls public key, transform/public-key.cpp\n");
+
+  
+
+
   m_impl->bls_pkey = make_shared<mcl::bn256::G2>();
   std::printf("trying to deserialize bls public key\n");
   m_impl->bls_pkey->deserialize(buf, size);
@@ -231,6 +248,22 @@ PublicKey::doBlsVerification(const uint8_t* blob, size_t blobLen, const uint8_t*
   #pragma GCC diagnostic ignored "-Wvexing-parse"
       bool initBNPairing();
   #pragma GCC diagnostic pop
+
+
+  // TODO: blslib
+  // bls::Signature given_sig;
+  // given_sig.deserializeHexStr(std::string(sig, sigLen));
+  // return given_sig.verify(*(m_impl->bls_pkey), blob, blobLen);
+
+
+
+
+
+
+
+
+
+
 
   using namespace mcl::bn256;
   G2 Q;
