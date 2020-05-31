@@ -171,9 +171,9 @@ def build(bld):
     # bld.read_shlib('mclbn256')
     # bld.read_shlib('mclbn384')
     # bld.read_shlib('mclbn384_256')
-    # bld.read_shlib('bls256')
+    bld.read_shlib('bls256')
     # bld.read_shlib('bls384')
-    bld.read_shlib('bls384_256')
+    #bld.read_shlib('bls384_256')
     bld.read_shlib('mcl')
     # bld.read_shlib('mclbn512')
     # bld.read_shlib('mclshe256')
@@ -199,7 +199,7 @@ def build(bld):
         bld(features='cxx',
             target='ndn-cxx-mm-objects',
             source=bld.path.ant_glob('ndn-cxx/**/*-osx.mm'),
-            use='BOOST PTHREAD OSX_COREFOUNDATION OSX_SECURITY OSX_SYSTEMCONFIGURATION OSX_FOUNDATION OSX_COREWLAN gmp gmpxx bn mcl  mclbn384 mclbn384_256 mclbn512 mclshe256 mclshe384 mclshe384_256 bls bls384 bls384_256',
+            use='BOOST PTHREAD OSX_COREFOUNDATION OSX_SECURITY OSX_SYSTEMCONFIGURATION OSX_FOUNDATION OSX_COREWLAN gmp gmpxx bn mcl  mclbn384 mclbn384_256 mclbn512 mclshe256 mclshe384 mclshe384_256 bls256 bls384 bls384_256',
             includes='.')
 
     libndn_cxx = dict(
@@ -210,7 +210,7 @@ def build(bld):
                                        'ndn-cxx/**/*-sqlite3.cpp']),
         features='pch',
         headers='ndn-cxx/impl/common-pch.hpp',
-        use='ndn-cxx-mm-objects version BOOST OPENSSL SQLITE3 ATOMIC RT PTHREAD gmp gmpxx bn mcl mclbn384 mclbn384_256 mclbn512 mclshe256 mclshe384 mclshe384_256 bls bls384 bls384_256',
+        use='ndn-cxx-mm-objects version BOOST OPENSSL SQLITE3 ATOMIC RT PTHREAD gmp gmpxx bn mcl mclbn384 mclbn384_256 mclbn512 mclshe256 mclshe384 mclshe384_256 bls256 bls384 bls384_256',
         includes='.',
         export_includes='.',
         install_path='${LIBDIR}')

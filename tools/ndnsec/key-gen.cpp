@@ -25,6 +25,7 @@
 #include "ndn-cxx/util/io.hpp"
 #include <bls/bls384_256.h>
 #include <bls/bls.hpp>
+#include <mcl/bn.hpp>
 
 
 // #include <mcl/bn_c384_256.h>
@@ -47,7 +48,9 @@ ndnsec_key_gen(int argc, char** argv)
   std::string userKeyId;
 
 // TODO: test bls
-  bls::init();
+  blsInit(MCL_BN254, MCLBN_COMPILED_TIME_VAR);
+
+
 //   bls::SecretKey sec;
 //   bls::PublicKey pub;
 
