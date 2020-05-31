@@ -480,6 +480,8 @@ PrivateKey::doBlsSign(const uint8_t* buf, size_t size) const
 { 
   std::printf("\nSigning data with BLS key\n"); // TODO:
   using namespace mcl::bn256;
+  initPairing();
+  // std::printf("\nmcl::bn256::initPairing()  finished\n");
   G1 sign, Hm;
   Fp t;
   t.setHashOf(buf, size);
