@@ -94,7 +94,11 @@ void
 PublicKey::loadBls(const uint8_t* buf, size_t size)
 {
   ENSURE_PUBLIC_KEY_NOT_LOADED(m_impl->bls_pkey);
-  bool initBNPairing();
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wvexing-parse"
+      bool initBNPairing();
+  #pragma GCC diagnostic pop
+
   initBNPairing(); // TODO: delete
   if(size == 0)
     NDN_THROW(Error("Failed to load BLS public key"));
