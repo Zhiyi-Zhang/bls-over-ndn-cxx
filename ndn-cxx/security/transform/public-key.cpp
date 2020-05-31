@@ -94,7 +94,8 @@ void
 PublicKey::loadBls(const uint8_t* buf, size_t size)
 {
   ENSURE_PUBLIC_KEY_NOT_LOADED(m_impl->bls_pkey);
-  mcl::bn256::initPairing(); // TODO: delete
+  bool initBNPairing();
+  initBNPairing(); // TODO: delete
   if(size == 0)
     NDN_THROW(Error("Failed to load BLS public key"));
   m_impl->bls_pkey = make_shared<mcl::bn256::G2>();

@@ -35,6 +35,7 @@
 #include <boost/scope_exit.hpp>
 #include <mcl/bn256.hpp>
 #include <cstring>
+#include <iostream>
 
 #define ENSURE_PRIVATE_KEY_LOADED(key) \
   do { \
@@ -51,6 +52,16 @@
 namespace ndn {
 namespace security {
 namespace transform {
+
+bool initBNPairing() {
+  static bool once = [](){
+        mcl::bn256::initPairing();
+        std::cout << "Pairing inited!" << std::endl;
+        return true;
+    }();
+  
+  return once;
+}
 
 static void
 opensslInitAlgorithms()
@@ -208,7 +219,7 @@ PrivateKey::loadPkcs1(std::istream& is)
 void
 PrivateKey::loadPlain(const uint8_t* buf, size_t size)
 {
-  mcl::bn256::initPairing();
+  initBNPairing();
   m_impl->bls_skey = make_shared<mcl::bn256::Fr>();
   std::printf("trying to deserialize bls secrect key\n"); // TODO: remove
   try{
@@ -480,8 +491,8 @@ PrivateKey::doBlsSign(const uint8_t* buf, size_t size) const
 { 
   std::printf("\nSigning data with BLS key\n"); // TODO:
   using namespace mcl::bn256;
-  initPairing();
-  // std::printf("\nmcl::bn256::initPairing()  finished\n");
+  initBNPairing();
+  // std::printf("\nmcl::bn256::initBNPairing()  finished\n");
   G1 sign, Hm;
   Fp t;
   t.setHashOf(buf, size);
@@ -672,7 +683,7 @@ PrivateKey::generateBlsKey(uint32_t keySize)
 { 
 // TODO: the following is a test of bls key generation
   auto privateKey = make_unique<PrivateKey>();
-  mcl::bn256::initPairing();
+  initBNPairing();
   privateKey->m_impl->bls_skey = make_shared<mcl::bn256::Fr>();
   privateKey->m_impl->bls_pkey = make_shared<mcl::bn256::G2>();
   std::printf("\n\ngenerated bls_skey and bls_pkey\n\n");
