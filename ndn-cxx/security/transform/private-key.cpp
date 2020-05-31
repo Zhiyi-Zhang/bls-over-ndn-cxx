@@ -686,6 +686,10 @@ PrivateKey::generateBlsKey(uint32_t keySize)
   initBNPairing();
   privateKey->m_impl->bls_skey = make_shared<mcl::bn256::Fr>();
   privateKey->m_impl->bls_pkey = make_shared<mcl::bn256::G2>();
+  mcl::bn256::G2 Q;
+  mcl::bn256::mapToG2(Q, 1);
+  privateKey->m_impl->bls_skey->setRand();
+  mcl::bn256::G2::mul(*(privateKey->m_impl->bls_pkey), Q, *(privateKey->m_impl->bls_skey));
   std::printf("\n\ngenerated bls_skey and bls_pkey\n\n");
   return privateKey;
 

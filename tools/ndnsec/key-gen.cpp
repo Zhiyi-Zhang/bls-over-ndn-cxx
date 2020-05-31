@@ -23,9 +23,12 @@
 #include "util.hpp"
 
 #include "ndn-cxx/util/io.hpp"
+#include <bls/bls384_256.h>
+#include <bls/bls.hpp>
+
 
 // #include <mcl/bn_c384_256.h>
-#include <mcl/bn256.hpp>
+// #include <mcl/bn256.hpp>
 
 #define ASSERT(x) { if (!(x)) { printf("err %s:%d\n", __FILE__, __LINE__); } }
 
@@ -43,6 +46,27 @@ ndnsec_key_gen(int argc, char** argv)
   char keyIdTypeChoice;
   std::string userKeyId;
 
+// TODO: test bls
+  bls::init();
+  bls::SecretKey sec;
+  bls::PublicKey pub;
+
+  // keygen
+  
+  sec.init();
+
+  sec.getPublicKey(pub);
+  std::string pubstr = pub.serializeToHexStr();
+  std::string secstr = sec.serializeToHexStr();
+  std::cout << "pub\n" << pubstr << std::endl;
+  std::cout<< "sec\n" << secstr << std::endl;
+
+
+  // sign
+  
+
+  
+  
 /*
   {
     using namespace mcl::bn256;

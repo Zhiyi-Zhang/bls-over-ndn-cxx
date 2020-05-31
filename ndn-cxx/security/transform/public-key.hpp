@@ -108,6 +108,13 @@ public:
   ConstBufferPtr
   encrypt(const uint8_t* plainText, size_t plainLen) const;
 
+  /**
+   * do BLS signature verification
+   * TODO: only a workaround, needs further check
+   */
+  bool
+  doBlsVerification(const uint8_t* blob, size_t blobLen, const uint8_t* sig, size_t sigLen) const;
+
 private:
   friend class VerifierFilter;
 

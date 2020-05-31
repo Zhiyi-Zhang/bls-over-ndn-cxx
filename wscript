@@ -171,6 +171,7 @@ def build(bld):
     bld.read_shlib('mclbn256')
     bld.read_shlib('mclbn384')
     bld.read_shlib('mclbn384_256')
+    bld.read_shlib('bls384_256')
     #bld.read_shlib('mclbn512')
     #bld.read_shlib('mclshe256')
     #bld.read_shlib('mclshe384')

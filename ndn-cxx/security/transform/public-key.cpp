@@ -224,6 +224,31 @@ PublicKey::rsaEncrypt(const uint8_t* plainText, size_t plainLen) const
   return out;
 }
 
+bool
+PublicKey::doBlsVerification(const uint8_t* blob, size_t blobLen, const uint8_t* sig, size_t sigLen) const
+{
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wvexing-parse"
+      bool initBNPairing();
+  #pragma GCC diagnostic pop
+
+  using namespace mcl::bn256;
+  G2 Q;
+  
+	mapToG2(Q, 1);
+  Fp12 e1, e2;
+  G1 blob_sig, given_sig;
+  Fp t;
+  given_sig.deserialize(sig, sigLen);
+  t.setHashOf(blob, blobLen);
+  mapToG1(blob_sig, t);
+  pairing(e1, given_sig, Q);
+  pairing(e2, blob_sig, *m_impl->bls_pkey);
+  
+
+  return e1 == e2;
+}
+
 } // namespace transform
 } // namespace security
 } // namespace ndn
