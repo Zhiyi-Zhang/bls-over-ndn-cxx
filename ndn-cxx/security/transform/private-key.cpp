@@ -244,7 +244,10 @@ PrivateKey::loadPlain(const uint8_t* buf, size_t size)
   m_impl->bls_skey = make_shared<bls::SecretKey>();
   std::printf("trying to deserialize bls secrect key\n"); // TODO: remove
   try{
-    m_impl->bls_skey->deserializeHexStr(std::string((char*)buf, size));
+    std::string sec_str((char*)buf, size);
+    std::cout << "sec key size " << size << std::endl;
+    std::cout << "sec key hex str:\n" << std::endl;
+    m_impl->bls_skey->deserializeHexStr(sec_str);
   }
   catch (const std::runtime_error&) {
     std::printf("failed to deserialize bls secrect key\n"); // TODO: remove
@@ -305,6 +308,7 @@ void
 PrivateKey::loadPlainBase64(const uint8_t* buf, size_t size)
 {
   OBufferStream os;
+  std::cout << "loadPlainBase64 size " << size << std::endl;
   bufferSource(buf, size) >> base64Decode() >> streamSink(os);
   this->loadPlain(os.buf()->data(), os.buf()->size());
 }
@@ -599,7 +603,9 @@ PrivateKey::toPlain() const
   std::printf("\nconverting bls secrect key to hex\n");
   std::string sec_str = m_impl->bls_skey->serializeToHexStr();
   std::cout << "toPlain: sec hex key:\n" << sec_str << std::endl;
-  auto buffer = make_shared<Buffer>(sec_str.c_str(), sec_str.size());  
+  const uint8_t* buf = reinterpret_cast<const uint8_t*>(sec_str.data());
+
+  auto buffer = make_shared<Buffer>(buf, sec_str.size());  
   std::printf("\nconverted bls secrect key to hex\n"); // TODO: to delete
 
 
@@ -782,7 +788,7 @@ PrivateKey::generateBlsKey(uint32_t keySize)
   privateKey->m_impl->bls_skey->init();
   printf("generated BlsKey\n\n");
 
-  // //  // TODO: test serialize
+  //  // TODO: test serialize
   // std::printf("\ntry derive when generate\n");
   // bls::PublicKey pub;
   // privateKey->m_impl->bls_skey->getPublicKey(pub);

@@ -232,6 +232,8 @@ void
 BackEndFile::saveKey(const Name& keyName, const PrivateKey& key)
 {
   std::string fileName = m_impl->toFileName(keyName).string();
+  // TODO:
+  std::printf("fileName %s\n", fileName.c_str());
   std::ofstream os(fileName);
   // special case for BLS key type, need further refactoring
   if (key.getKeyType() == KeyType::BLS) {
