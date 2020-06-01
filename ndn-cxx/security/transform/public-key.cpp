@@ -28,13 +28,9 @@
 #include "ndn-cxx/security/impl/openssl-helper.hpp"
 #include "ndn-cxx/encoding/buffer-stream.hpp"
 
-// #include <mcl/bn256.hpp> // TODO: blslib remove
-// #include <bls/bls384_256.h>
-// #include <bls/bls.hpp>
-
-#include <bls/bls256.h>
+#include <mcl/bn256.hpp> // TODO: blslib remove
+#include <bls/bls384_256.h>
 #include <bls/bls.hpp>
-#include <mcl/bn.hpp>
 
 #define ENSURE_PUBLIC_KEY_LOADED(key) \
   do { \
@@ -67,9 +63,9 @@ public:
 
 public:
   EVP_PKEY* key;
-  // shared_ptr<mcl::bn256::G2> bls_pkey;
+  shared_ptr<mcl::bn256::G2> bls_pkey;
   // TODO: blslib
-  shared_ptr<bls::PublicKey> bls_pkey;
+  // shared_ptr<bls::PublicKey> bls_pkey;
 };
 
 PublicKey::PublicKey()
@@ -115,17 +111,17 @@ PublicKey::loadBls(const uint8_t* buf, size_t size)
 
 
   // TODO: blslib
-  m_impl->bls_pkey = make_shared<bls::PublicKey>();
-  std::printf("trying to deserialize bls public key\n");
-  m_impl->bls_pkey->deserializeHexStr(std::string((char*)buf, size));
-  std::printf("\nloaded bls public key, transform/public-key.cpp\n");
+  // m_impl->bls_pkey = make_shared<bls::PublicKey>();
+  // std::printf("trying to deserialize bls public key\n");
+  // m_impl->bls_pkey->deserializeHexStr(std::string(buf, size));
+  // std::printf("\nloaded bls public key, transform/public-key.cpp\n");
 
   
 
 
-  // m_impl->bls_pkey = make_shared<mcl::bn256::G2>();
-  // std::printf("trying to deserialize bls public key\n");
-  // m_impl->bls_pkey->deserialize(buf, size);
+  m_impl->bls_pkey = make_shared<mcl::bn256::G2>();
+  std::printf("trying to deserialize bls public key\n");
+  m_impl->bls_pkey->deserialize(buf, size);
 
 
   // std::string str((char*)buf, size); // TODO: explict type cast here, need further change
@@ -255,9 +251,9 @@ PublicKey::doBlsVerification(const uint8_t* blob, size_t blobLen, const uint8_t*
 
 
   // TODO: blslib
-  bls::Signature given_sig;
-  given_sig.deserializeHexStr(std::string((char*)sig, sigLen));
-  return given_sig.verify(*(m_impl->bls_pkey), blob, blobLen);
+  // bls::Signature given_sig;
+  // given_sig.deserializeHexStr(std::string(sig, sigLen));
+  // return given_sig.verify(*(m_impl->bls_pkey), blob, blobLen);
 
 
 
@@ -269,21 +265,21 @@ PublicKey::doBlsVerification(const uint8_t* blob, size_t blobLen, const uint8_t*
 
 
 
-  // using namespace mcl::bn256;
-  // G2 Q;
+  using namespace mcl::bn256;
+  G2 Q;
   
-	// mapToG2(Q, 1);
-  // Fp12 e1, e2;
-  // G1 blob_sig, given_sig;
-  // Fp t;
-  // given_sig.deserialize(sig, sigLen);
-  // t.setHashOf(blob, blobLen);
-  // mapToG1(blob_sig, t);
-  // pairing(e1, given_sig, Q);
-  // pairing(e2, blob_sig, *m_impl->bls_pkey);
+	mapToG2(Q, 1);
+  Fp12 e1, e2;
+  G1 blob_sig, given_sig;
+  Fp t;
+  given_sig.deserialize(sig, sigLen);
+  t.setHashOf(blob, blobLen);
+  mapToG1(blob_sig, t);
+  pairing(e1, given_sig, Q);
+  pairing(e2, blob_sig, *m_impl->bls_pkey);
   
 
-  // return e1 == e2;
+  return e1 == e2;
 }
 
 } // namespace transform

@@ -76,7 +76,6 @@ BackEnd::createKey(const Name& identity, const KeyParams& params)
                                       boost::lexical_cast<std::string>(params.getKeyIdType())));
   }
 
-  std::printf("backend: now try create key\n");
   return doCreateKey(identity, params);
 }
 

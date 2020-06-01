@@ -33,12 +33,9 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/scope_exit.hpp>
-// #include <mcl/bn256.hpp> // TODO: remove
-// #include <bls/bls384_256.h>
-// #include <bls/bls.hpp>
-#include <bls/bls256.h>
+#include <mcl/bn256.hpp> // TODO: remove
+#include <bls/bls384_256.h>
 #include <bls/bls.hpp>
-#include <mcl/bn.hpp>
 #include <cstring>
 #include <iostream>
 
@@ -61,22 +58,27 @@ namespace transform {
 bool initBNPairing() {
   // TODO: blslib
 
-  static bool once = [](){
-        bls::init();
-        std::cout << "BLS inited!" << std::endl;
-        return true;
-    }();
-  
-  return once;
-
-
   // static bool once = [](){
-  //       mcl::bn256::initPairing();
-  //       std::cout << "Pairing inited!" << std::endl;
+  //       bls::init();
+  //       std::cout << "BLS inited!" << std::endl;
   //       return true;
   //   }();
   
   // return once;
+
+
+
+
+
+
+
+  static bool once = [](){
+        mcl::bn256::initPairing();
+        std::cout << "Pairing inited!" << std::endl;
+        return true;
+    }();
+  
+  return once;
 }
 
 static void
@@ -101,10 +103,10 @@ public:
 
 public:
   EVP_PKEY* key = nullptr;
-  // shared_ptr<mcl::bn256::Fr> bls_skey = nullptr;
-  // shared_ptr<mcl::bn256::G2> bls_pkey = nullptr;
+  shared_ptr<mcl::bn256::Fr> bls_skey = nullptr;
+  shared_ptr<mcl::bn256::G2> bls_pkey = nullptr;
   // TODO: blslib
-  shared_ptr<bls::SecretKey> bls_skey = nullptr;
+  // shared_ptr<bls::SecretKey> bls_skey = nullptr;
 
 #if OPENSSL_VERSION_NUMBER < 0x1010100fL
   size_t keySize = 0; // in bits, used only for HMAC
@@ -241,31 +243,31 @@ PrivateKey::loadPlain(const uint8_t* buf, size_t size)
 
   // TODO: blslib
 
-  m_impl->bls_skey = make_shared<bls::SecretKey>();
-  std::printf("trying to deserialize bls secrect key\n"); // TODO: remove
-  try{
-    m_impl->bls_skey->deserializeHexStr(std::string((char*)buf, size));
-  }
-  catch (const std::runtime_error&) {
-    std::printf("failed to deserialize bls secrect key\n"); // TODO: remove
-    NDN_THROW(Error("Failed to load bls private key"));
-  }
-  std::printf("successfully loaded bls secrect key\n"); // TODO: remove
-
-
-
-
-
-  // m_impl->bls_skey = make_shared<mcl::bn256::Fr>();
+  // m_impl->bls_skey = make_shared<bls::SecretKey>();
   // std::printf("trying to deserialize bls secrect key\n"); // TODO: remove
   // try{
-  //   m_impl->bls_skey->deserialize(buf, size);
+  //   m_impl->bls_skey->deserialize(std::string(buf, size));
   // }
   // catch (const std::runtime_error&) {
   //   std::printf("failed to deserialize bls secrect key\n"); // TODO: remove
   //   NDN_THROW(Error("Failed to load bls private key"));
   // }
   // std::printf("successfully loaded bls secrect key\n"); // TODO: remove
+
+
+
+
+
+  m_impl->bls_skey = make_shared<mcl::bn256::Fr>();
+  std::printf("trying to deserialize bls secrect key\n"); // TODO: remove
+  try{
+    m_impl->bls_skey->deserialize(buf, size);
+  }
+  catch (const std::runtime_error&) {
+    std::printf("failed to deserialize bls secrect key\n"); // TODO: remove
+    NDN_THROW(Error("Failed to load bls private key"));
+  }
+  std::printf("successfully loaded bls secrect key\n"); // TODO: remove
 }
 
 // TODO: workaround for bls key
@@ -470,41 +472,30 @@ PrivateKey::derivePublicKey() const
 {
   if(getKeyType() == KeyType::BLS) {
 
-    // TODO: bls lib   failed
-    std::printf("1111 BLS public key\n");
-    ENSURE_PRIVATE_KEY_LOADED(m_impl->bls_skey);
-    initBNPairing();
-    std::printf("222 BLS public key\n"); 
-
-    bls::PublicKey pub;
-
-    // TODO:
-    std::string sec_str = m_impl->bls_skey->serializeToHexStr();
-    std::cout << "derive pub key: sec hex key:\n" << sec_str << std::endl;    
-
-
-    m_impl->bls_skey->getPublicKey(pub);
-    std::printf("333 BLS public key\n"); 
-    std::string pub_str = pub.serializeToHexStr();
-    std::printf("444 BLS public key\n"); 
-    auto result = make_shared<Buffer>(pub_str.c_str(), pub_str.size());
-    std::printf("derived BLS public key\n"); 
-    return result;
-
-
-
-
-
-
-
+    // TODO: bls lib
     // ENSURE_PRIVATE_KEY_LOADED(m_impl->bls_skey);
 
-    // const size_t buf_size = 2048;
-    // uint8_t buf[buf_size];
-    // size_t keysize = m_impl->bls_pkey->serialize(buf, buf_size);
-    // auto result = make_shared<Buffer>(buf, keysize);
+    // bls::PublicKey pub;
+    // m_impl->bls_skey->getPublicKey(pub);
+    // std::string pub_str = pub.serializeToHexStr();
+    // auto result = make_shared<Buffer>(pub_str.c_str(), pub_str.size());
     // std::printf("derived BLS public key\n"); 
     // return result;
+
+
+
+
+
+
+
+    ENSURE_PRIVATE_KEY_LOADED(m_impl->bls_skey);
+
+    const size_t buf_size = 2048;
+    uint8_t buf[buf_size];
+    size_t keysize = m_impl->bls_pkey->serialize(buf, buf_size);
+    auto result = make_shared<Buffer>(buf, keysize);
+    std::printf("derived BLS public key\n"); 
+    return result;
 
 
 
@@ -544,41 +535,41 @@ PrivateKey::doBlsSign(const uint8_t* buf, size_t size) const
 { 
 
 
-  // // TODO: blslib
-  std::printf("\nSigning data with BLS key\n"); // TODO:
-  initBNPairing();
-  bls::Signature sig;
-  m_impl->bls_skey->sign(sig, buf, size);
-  std::string sig_str = sig.serializeToHexStr();
-  auto buffer = make_shared<Buffer>(sig_str.c_str(), sig_str.size());
-  std::printf("\nSigned data with BLS key\n"); // TODO:
-  return buffer; 
-
-
-
-
-
-
-
-
-
-
-
+  // // TODO: blssign
   // std::printf("\nSigning data with BLS key\n"); // TODO:
-  // using namespace mcl::bn256;
   // initBNPairing();
-  // // std::printf("\nmcl::bn256::initBNPairing()  finished\n");
-  // G1 sign, Hm;
-  // Fp t;
-  // t.setHashOf(buf, size);
-  // mapToG1(Hm, t);
-  // G1::mul(sign, Hm, *(m_impl->bls_skey));
-  // const size_t buf_size = 4096;
-  // uint8_t bls_buf[buf_size];
-  // size_t sig_size = sign.serialize(bls_buf, buf_size);
-  // auto buffer = make_shared<Buffer>(bls_buf, sig_size);
-  // std::printf("\nSigned data with BLS key\n"); // TODO
-  // return buffer;
+  // bls::Signature sig;
+  // m_impl->bls_skey->sign(sig, buf, size);
+  // std::string sig_str = sig.serializeToHexStr();
+  // auto buffer = make_shared<Buffer>(sig_str.c_str(), sig_str.size());
+  // std::printf("\nSigned data with BLS key\n"); // TODO:
+  // return buffer; 
+
+
+
+
+
+
+
+
+
+
+
+  std::printf("\nSigning data with BLS key\n"); // TODO:
+  using namespace mcl::bn256;
+  initBNPairing();
+  // std::printf("\nmcl::bn256::initBNPairing()  finished\n");
+  G1 sign, Hm;
+  Fp t;
+  t.setHashOf(buf, size);
+  mapToG1(Hm, t);
+  G1::mul(sign, Hm, *(m_impl->bls_skey));
+  const size_t buf_size = 4096;
+  uint8_t bls_buf[buf_size];
+  size_t sig_size = sign.serialize(bls_buf, buf_size);
+  auto buffer = make_shared<Buffer>(bls_buf, sig_size);
+  std::printf("\nSigned data with BLS key\n"); // TODO
+  return buffer;
 }
 
 void*
@@ -596,14 +587,9 @@ PrivateKey::toPlain() const
 
 
   // TODO: blslib
-  std::printf("\nconverting bls secrect key to hex\n");
-  std::string sec_str = m_impl->bls_skey->serializeToHexStr();
-  std::cout << "toPlain: sec hex key:\n" << sec_str << std::endl;
-  auto buffer = make_shared<Buffer>(sec_str.c_str(), sec_str.size());  
-  std::printf("\nconverted bls secrect key to hex\n"); // TODO: to delete
-
-
-  return buffer;
+  // std::string sec_str = m_impl->bls_skey->serializeToHexStr();
+  // auto buffer = make_shared<Buffer>(sec_str, sec_str.size());  
+  // return buffer;
 
 
 
@@ -611,13 +597,13 @@ PrivateKey::toPlain() const
 
   
 
-  // std::printf("\nconverting bls secrect key to plain\n");   // TODO: to delete
-  // const size_t buf_size = 2048;
-  // uint8_t buf[buf_size];
-  // size_t keysize = m_impl->bls_skey->serialize(buf, buf_size);
-  // auto buffer = make_shared<Buffer>(buf, keysize);
-  // std::printf("\nconverted bls secrect key to plain\n"); // TODO: to delete
-  // return buffer;
+  std::printf("\nconverting bls secrect key to plain\n");   // TODO: to delete
+  const size_t buf_size = 2048;
+  uint8_t buf[buf_size];
+  size_t keysize = m_impl->bls_skey->serialize(buf, buf_size);
+  auto buffer = make_shared<Buffer>(buf, keysize);
+  std::printf("\nconverted bls secrect key to plain\n"); // TODO: to delete
+  return buffer;
 
   // std::printf("\nconverting bls secrect key to plain\n");   // TODO: to delete
   // std::ostringstream os;
@@ -775,22 +761,11 @@ PrivateKey::generateBlsKey(uint32_t keySize)
 { 
   // TODO: blslib
   
-  auto privateKey = make_unique<PrivateKey>();
-  initBNPairing();
-  printf("generateBlsKey\n\n");
-  privateKey->m_impl->bls_skey = make_shared<bls::SecretKey>();
-  privateKey->m_impl->bls_skey->init();
-  printf("generated BlsKey\n\n");
+  // auto privateKey = make_unique<PrivateKey>();
+  // initBNPairing();
+  // privateKey->m_impl->bls_skey = make_shared<bls::SecretKey>();
+  // privateKey->m_impl->bls_skey->init();
 
-  // //  // TODO: test serialize
-  // std::printf("\ntry derive when generate\n");
-  // bls::PublicKey pub;
-  // privateKey->m_impl->bls_skey->getPublicKey(pub);
-  // std::printf("\ntry derive when generate\n");
-
-
-
-  return privateKey;
   
 
 
@@ -800,17 +775,17 @@ PrivateKey::generateBlsKey(uint32_t keySize)
 
 
 
-// // TODO: the following is a test of bls key generation
-//   auto privateKey = make_unique<PrivateKey>();
-//   initBNPairing();
-//   privateKey->m_impl->bls_skey = make_shared<mcl::bn256::Fr>();
-//   privateKey->m_impl->bls_pkey = make_shared<mcl::bn256::G2>();
-//   mcl::bn256::G2 Q;
-//   mcl::bn256::mapToG2(Q, 1);
-//   privateKey->m_impl->bls_skey->setRand();
-//   mcl::bn256::G2::mul(*(privateKey->m_impl->bls_pkey), Q, *(privateKey->m_impl->bls_skey));
-//   std::printf("\n\ngenerated bls_skey and bls_pkey\n\n");
-//   return privateKey;
+// TODO: the following is a test of bls key generation
+  auto privateKey = make_unique<PrivateKey>();
+  initBNPairing();
+  privateKey->m_impl->bls_skey = make_shared<mcl::bn256::Fr>();
+  privateKey->m_impl->bls_pkey = make_shared<mcl::bn256::G2>();
+  mcl::bn256::G2 Q;
+  mcl::bn256::mapToG2(Q, 1);
+  privateKey->m_impl->bls_skey->setRand();
+  mcl::bn256::G2::mul(*(privateKey->m_impl->bls_pkey), Q, *(privateKey->m_impl->bls_skey));
+  std::printf("\n\ngenerated bls_skey and bls_pkey\n\n");
+  return privateKey;
 }
 
 unique_ptr<PrivateKey>
