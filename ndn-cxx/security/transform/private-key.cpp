@@ -319,7 +319,9 @@ void
 PrivateKey::loadPlainBase64(std::istream& is)
 {
   OBufferStream os;
-  streamSource(is) >> base64Decode() >> streamSink(os);
+  // streamSource(is) >> base64Decode() >> streamSink(os); // TODO: remove 64
+  streamSource(is)  >> streamSink(os);
+  std::printf("buf size %d\n\n",  os.buf()->size());
   this->loadPlain(os.buf()->data(), os.buf()->size());
 }
 
@@ -429,7 +431,8 @@ PrivateKey::loadPkcs8Base64(std::istream& is, PasswordCallback pwCallback)
 void
 PrivateKey::savePlainBase64(std::ostream& os) const
 {
-  bufferSource(*this->toPlain()) >> base64Encode() >> streamSink(os);
+  // bufferSource(*this->toPlain()) >> base64Encode() >> streamSink(os); // TODO: remove 64
+  bufferSource(*this->toPlain()) >> streamSink(os);
   std::printf("\nprivate-key.cpp line 317 saved to streamSink\n");
 }
 
@@ -478,7 +481,7 @@ PrivateKey::derivePublicKey() const
     std::printf("1111 BLS public key\n");
     ENSURE_PRIVATE_KEY_LOADED(m_impl->bls_skey);
     initBNPairing();
-    std::printf("222 BLS public key\n"); 
+    std::printf("222 BLS public key\n");
 
     bls::PublicKey pub;
 

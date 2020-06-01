@@ -208,6 +208,7 @@ unique_ptr<PrivateKey>
 BackEndFile::loadKey(const Name& keyName) const
 {
   std::ifstream is(m_impl->toFileName(keyName).string());
+  std::printf("read sec file %s\n", m_impl->toFileName(keyName).string().c_str());
   auto key = make_unique<PrivateKey>();
   // TODO: support BLS !!!!!!!!!!!!!!!!!!!
   try {
@@ -216,7 +217,8 @@ BackEndFile::loadKey(const Name& keyName) const
   catch (const PrivateKey::Error&) {
     try {
       // try load BLS key
-      key->loadPlainBase64(is);
+      std::ifstream iss(m_impl->toFileName(keyName).string());
+      key->loadPlainBase64(iss);
     }
     catch (const PrivateKey::Error&) {
       std::printf("\nfailed to load bls key\n"); // TODO: remove
