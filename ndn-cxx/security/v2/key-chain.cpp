@@ -269,15 +269,12 @@ KeyChain::createKey(const Identity& identity, const KeyParams& params)
   BOOST_ASSERT(static_cast<bool>(identity));
 
   // create key in TPM
-  Name keyName = m_tpm->createKey(identity.getName(), params); // TODO: support BLS
+  Name keyName = m_tpm->createKey(identity.getName(), params);
 
-  std::printf("\nsuccessfully created key, line 274, key-chain.cpp\n");
   // set up key info in PIB
   ConstBufferPtr pubKey = m_tpm->getPublicKey(keyName);
-  std::printf("adding key size %ld\n", pubKey->size());
   Key key = identity.addKey(pubKey->data(), pubKey->size(), keyName);
 
-  std::printf("\nsuccessfully added public key\n");
   NDN_LOG_DEBUG("Requesting self-signing for newly created key " << key.getName());
   selfSign(key);
 
@@ -448,7 +445,7 @@ KeyChain::importPrivateKey(const Name& keyName, shared_ptr<transform::PrivateKey
 }
 
 // public: signing
-// TODO: support BLS signing
+
 void
 KeyChain::sign(Data& data, const SigningInfo& params)
 {
@@ -580,11 +577,9 @@ KeyChain::selfSign(Key& key)
   // set metainfo
   certificate.setContentType(tlv::ContentType_Key);
   certificate.setFreshnessPeriod(1_h);
-  std::printf("\nKeyChain::selfSign set metainfo\n"); // TODO: 
 
   // set content
   certificate.setContent(key.getPublicKey().data(), key.getPublicKey().size());
-  std::printf("\nKeyChain::selfSign set content\n"); // TODO: 
 
   // set signature-info
   SignatureInfo signatureInfo;
@@ -593,12 +588,8 @@ KeyChain::selfSign(Key& key)
   signatureInfo.setValidityPeriod(ValidityPeriod(time::system_clock::TimePoint(),
                                                  time::system_clock::now() + 20 * 365_days));
 
-  std::printf("\nKeyChain::selfSign set validity period\n"); // TODO:
-  // SigningInfo(key);
-  // std::printf("\ntmp\n");
   sign(certificate, SigningInfo(key).setSignatureInfo(signatureInfo));
 
-  std::printf("\nKeyChain::signed certificate\n"); // TODO:
   key.addCertificate(certificate);
   return certificate;
 }
@@ -637,7 +628,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
     }
     case SigningInfo::SIGNER_TYPE_KEY: {
       key = params.getPibKey();
-      std::printf("\ngot key from pib, key-chain.cpp line 641\n");
+      
       if (!key) {
         Name identityName = extractIdentityFromKeyName(params.getSignerName());
         try {
@@ -698,13 +689,9 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
   }
 
   BOOST_ASSERT(key);
-  std::printf("key-chain, prepareSignatureInfo line 701\n"); // TODO:
   sigInfo.setSignatureType(getSignatureType(key.getKeyType(), params.getDigestAlgorithm()));
-  std::printf("key-chain, prepareSignatureInfo line 703\n"); // TODO:
   sigInfo.setKeyLocator(key.getName());
-  std::printf("key-chain, prepareSignatureInfo line 705\n"); // TODO:
   NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
-  std::printf("key-chain, prepareSignatureInfo line 706\n"); // TODO:
   return std::make_tuple(key.getName(), sigInfo);
 }
 

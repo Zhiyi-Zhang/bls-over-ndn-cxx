@@ -120,7 +120,7 @@ BackEndFile::doGetKeyHandle(const Name& keyName) const
   return make_unique<KeyHandleMem>(loadKey(keyName));
 }
 
-unique_ptr<KeyHandle> // TODO: add BLS support
+unique_ptr<KeyHandle>
 BackEndFile::doCreateKey(const Name& identityName, const KeyParams& params)
 {
   switch (params.getKeyType()) {
@@ -203,14 +203,13 @@ BackEndFile::doImportKey(const Name& keyName, shared_ptr<transform::PrivateKey> 
   }
 }
 
+// TODO: currently added workaround for BLS key, needs refactoring
 unique_ptr<PrivateKey>
-
 BackEndFile::loadKey(const Name& keyName) const
 {
   std::ifstream is(m_impl->toFileName(keyName).string());
-  std::printf("read sec file %s\n", m_impl->toFileName(keyName).string().c_str());
   auto key = make_unique<PrivateKey>();
-  // TODO: support BLS !!!!!!!!!!!!!!!!!!!
+  
   try {
     key->loadPkcs1Base64(is);
   }
@@ -221,11 +220,9 @@ BackEndFile::loadKey(const Name& keyName) const
       key->loadPlainBase64(iss);
     }
     catch (const PrivateKey::Error&) {
-      std::printf("\nfailed to load bls key\n"); // TODO: remove
       NDN_THROW(Error("failed to load bls key"));
     }
   } 
-  
   
   return key;
 }
@@ -234,15 +231,10 @@ void
 BackEndFile::saveKey(const Name& keyName, const PrivateKey& key)
 {
   std::string fileName = m_impl->toFileName(keyName).string();
-  // TODO:
-  std::printf("fileName %s\n", fileName.c_str());
   std::ofstream os(fileName);
   // special case for BLS key type, need further refactoring
   if (key.getKeyType() == KeyType::BLS) {
-    // TODO: save plain base64
-    std::printf("\n\ngot BLS key to save\n\n"); // TODO: delete printf
     key.savePlainBase64(os);
-    std::printf("\n\nsaved BLS key\n\n"); // TODO: delete printf
   }
   else{
     key.savePkcs1Base64(os);

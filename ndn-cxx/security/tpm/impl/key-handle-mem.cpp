@@ -38,13 +38,11 @@ KeyHandleMem::KeyHandleMem(shared_ptr<transform::PrivateKey> key)
   BOOST_ASSERT(m_key != nullptr);
 }
 
-// TODO: add BLS support
 ConstBufferPtr
 KeyHandleMem::doSign(DigestAlgorithm digestAlgorithm, const uint8_t* buf, size_t size) const
 {
   // special case for BLS
   if (m_key->getKeyType() == KeyType::BLS){
-    std::printf("\nkey handle mem, doSign, BLS key detected\n");
     return m_key->doBlsSign(buf, size);
     // return something
   }
@@ -55,7 +53,6 @@ KeyHandleMem::doSign(DigestAlgorithm digestAlgorithm, const uint8_t* buf, size_t
   return sigOs.buf();
 }
 
-// TODO: add BLS support
 bool
 KeyHandleMem::doVerify(DigestAlgorithm digestAlgorithm, const uint8_t* buf, size_t size,
                        const uint8_t* sig, size_t sigLen) const
