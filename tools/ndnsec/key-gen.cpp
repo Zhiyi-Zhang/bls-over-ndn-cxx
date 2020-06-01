@@ -47,7 +47,7 @@ ndnsec_key_gen(int argc, char** argv)
   char keyIdTypeChoice;
   std::string userKeyId;
 
-// TODO: test bls
+// // TODO: test bls
   bls::init();
 
 
@@ -67,23 +67,25 @@ ndnsec_key_gen(int argc, char** argv)
   std::cout<< "sec\n" << secstr << std::endl;
 
 
-//   // sign
-//   const size_t buf_size = 1024;
-//   uint8_t buf[buf_size];
-//   sec.deserializeHexStr("xxxxxxx");
-//   pub.deserializeHexStr("pub str");
-//   bls::Signature sig;
-//   sec.sign(sig, buf, buf_size);
-//   std::string sig_str = sig.serializeToHexStr();
+// //   // sign
+//   std::string m = "hello";
 
 
-//   // verify 
-//   sec.deserializeHexStr("xxxxxxx");
-//   pub.deserializeHexStr("pub str");
+  
+//   sec.deserializeHexStr("a8dece33cb04cb68fadc4678c2b91ffab3eb91ba9e130b1986c40f67a1d0a600");
+//   pub.deserializeHexStr("2b80082e0b21113fa486f701d6339d51805569a81d69cff4ba3aa2efd7f86a00e2ce96dd0423560cd5207d248bc19570337f16e4db3ec1afe469da45c484a107");
+//   // bls::Signature sig;
+//   // sec.sign(sig, m.c_str(), m.size());
+//   // std::string sig_str = sig.serializeToHexStr();
+//   // std::cout << "sig_str\n" << sig_str << std::endl;
+
+
+// //   // verify 
+
 //   bls::Signature given_sig;
-//   given_sig.deserializeHexStr("sig str");
-//   given_sig.verify(pub, buf, buf_size);
-
+//   given_sig.deserializeHexStr("14bc6169a861bfbab03add123fe52555c35c979e589f49594f204076dbe8f28b");
+//   bool res = given_sig.verify(pub, m.c_str(), m.size());
+//   std::cout<<"result \n" << res << std::endl;
   
   
 
